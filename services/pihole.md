@@ -185,3 +185,46 @@ Key files:
 - `/etc/dnsmasq.d/` - DNS settings
 
 Or use built-in teleporter: Settings → Teleporter → Export
+---
+
+## Unbound — Recursive DNS Resolver
+
+As of April 2026, this homelab runs a fully self-hosted DNS stack. Pi-hole no longer forwards queries to any third-party upstream (Cloudflare, Google, etc.). Instead, it forwards to **Unbound**, a local recursive resolver running on the same Raspberry Pi that queries DNS root servers directly.
+
+**This means no third party ever sees DNS queries from this network.**
+
+### Architecture
+### Installation
+```bash
+sudo apt update && sudo apt install unbound -y
+sudo wget -O /var/lib/unbound/root.hints https://www.internic.net/domain/named.root
+```
+
+### Configuration
+```bash
+sudo nano /etc/unbound/unbound.conf.d/pi-hole.conf
+```
+### Enable and Start
+```bash
+sudo systemctl restart unbound
+sudo systemctl enable unbound
+sudo systemctl status unbound
+```
+
+### Point Pi-hole at Unbound
+
+In Pi-hole web UI → Settings → DNS:
+- Uncheck all preset upstream servers
+- Add custom upstream: `127.0.0.1#5335`
+- Save
+
+### Verify
+```bash
+# Test Unbound directly
+dig pi-hole.net @127.0.0.1 -p 5335
+
+# Test full chain from a client
+dig google.com @192.168.50.2
+```
+
+Both should return `status: NOERROR` with a resolved IP.
